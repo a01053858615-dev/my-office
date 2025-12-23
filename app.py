@@ -1,29 +1,43 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
+import pandas as pd
 
-# 1. 로그인 상태 확인 (세션 저장)
-if 'auth' not in st.session_state:
-    st.session_state['auth'] = False
+# 1. 구글 시트 연결 설정
+# 시트 주소에 아까 복사한 본인의 구글 시트 링크를 넣어주세요
+url = "여기에_복사한_구글시트_링크를_넣으세요"
+conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 2. 로그인 화면
-if not st.session_state['auth']:
-    st.title("🔐 관리 시스템 로그인")
-    user_id = st.text_input("아이디")
-    user_pw = st.text_input("비밀번호", type="password")
+st.title("📋 업무 보고 및 저장 시스템")
+
+# 2. 데이터 불러오기 표시
+st.subheader("현재 저장된 기록")
+existing_data = conn.read(spreadsheet=url, usecols=[0,1,2,3,4])
+st.dataframe(existing_data)
+
+# 3. 데이터 입력 폼
+st.subheader("새 보고서 작성")
+with st.form(key="report_form"):
+    date = st.date_input("날짜")
+    author = st.text_input("작성자")
+    title = st.text_input("제목")
+    content = st.text_area("내용")
     
-    if st.button("로그인"):
-        # 임시 아이디/비밀번호 (나중에 바꿀 수 있습니다)
-        if user_id == "admin" and user_pw == "1234":
-            st.session_state['auth'] = True
-            st.rerun()
-        else:
-            st.error("정보가 일치하지 않습니다.")
+    submit_button = st.form_submit_button(label="보고서 제출")
 
-# 3. 로그인 성공 시 보여줄 화면
-else:
-    st.sidebar.button("로그아웃", on_click=lambda: st.session_state.update({"auth": False}))
-    st.title("🔥 우리 회사 오피스 메인")
-    st.write("환영합니다! 이제 보안이 적용된 상태입니다.")
-    
-    # 여기에 앞으로 결재, 인사관리 등의 메뉴를 추가할 거예요.
-    menu = st.sidebar.selectbox("메뉴 선택", ["대시보드", "전자결재", "인사관리"])
-    st.info(f"현재 선택된 메뉴: {menu}")
+    if submit_button:
+        # 새로운 데이터를 표 형태로 만듦
+        new_data = pd.DataFrame([{
+            "날짜": str(date),
+            "작성자": author,
+            "제목": title,
+            "내용": content,
+            "결재상태": "대기"
+        }])
+        
+        # 기존 데이터에 추가
+        updated_df = pd.concat([existing_data, new_data], ignore_index=True)
+        
+        # 구글 시트에 다시 쓰기
+        conn.update(spreadsheet=url, data=updated_df)
+        st.success("데이터가 구글 시트에 영구 저장되었습니다!")
+        st.rerun()
