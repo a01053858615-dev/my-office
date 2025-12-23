@@ -1,20 +1,15 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 
-# 1. 주소 설정
-SHEET_URL = "1nhrngvyO-L2Cwbvr_2-I-D1qwunYtB1WJuv9QBev8Nw"
+# 주소 대신 시트 제목을 적어보세요
+SHEET_TITLE = "시설관리DB" # 본인의 시트 제목으로 수정
 
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
-    
-    st.title("🔍 시스템 연결 진단")
-    
-    # 2. 데이터 한 번 읽어보기 테스트
-    df = conn.read(spreadsheet=SHEET_URL, worksheet="users", ttl=0)
-    
-    st.success("✅ 구글 시트 연결 성공!")
-    st.write("불러온 유저 목록:", df)
-    
+    # spreadsheet 매개변수에 주소 대신 제목을 넣어봅니다.
+    df = conn.read(spreadsheet=SHEET_TITLE, worksheet="users", ttl=0)
+    st.success("✅ 드디어 연결 성공!")
+    st.write(df)
 except Exception as e:
-    st.error("❌ 연결 중 오류 발생")
-    st.exception(e)
+    st.error("❌ 아직 시트를 찾지 못했습니다.")
+    st.write(e)
