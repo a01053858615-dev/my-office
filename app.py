@@ -19,7 +19,7 @@ def get_data(worksheet_name):
     df = conn.read(spreadsheet=SHEET_URL, worksheet=worksheet_name, ttl=0)
     df = df.astype(str)
     for col in df.columns:
-        # 소수점 .0 제거 및 공백 제거로 로그인 오류 방지
+        # 숫자 ID 뒤에 붙는 .0 제거 및 공백 제거
         df[col] = df[col].str.replace(r'\.0$', '', regex=True).str.strip()
     return df
 
@@ -75,13 +75,14 @@ def main():
 
     else:
         # [로그인 성공 후 메인 화면]
-        user_info = st.session_state['user_info']
-        st.sidebar.info(f"접속자: {user_info['name']} ({user_info['role']})")
+        user = st.session_state['user_info']
+        st.sidebar.info(f"접속자: {user['name']} ({user['role']})")
         
         if st.sidebar.button("로그아웃", key="logout_btn"):
             st.session_state['logged_in'] = False
             st.rerun()
 
+        # 메뉴 구성
         main_menu = st.sidebar.radio("업무 선택", ["⏰ 근태 관리", "📝 업무 보고 작성", "📊 기록 조회"])
 
         # 1. 근태 관리 기능
@@ -92,14 +93,14 @@ def main():
             
             attendance_df = get_data("attendance")
             my_today_record = attendance_df[(attendance_df['date'] == today) & 
-                                            (attendance_df['username'] == user_info['username'])]
+                                            (attendance_df['username'] == user['username'])]
 
             st.info(f"📅 오늘 날짜: {today} | ⌚ 현재 시각: {now_time}")
 
             if my_today_record.empty:
                 st.warning("오늘 아직 출근하지 않으셨습니다.")
                 if st.button("🚀 출근하기", use_container_width=True):
-                    new_att = pd.DataFrame([{"date": today, "username": user_info['username'], "name": user_info['name'], "clock_in": now_time, "clock_out": "", "total_hours": ""}])
+                    new_att = pd.DataFrame([{"date": today, "username": user['username'], "name": user['name'], "clock_in": now_time, "clock_out": "", "total_hours": ""}])
                     updated_att = pd.concat([attendance_df, new_att], ignore_index=True)
                     conn.update(spreadsheet=SHEET_URL, worksheet="attendance", data=updated_att)
                     st.rerun()
@@ -113,10 +114,9 @@ def main():
                 st.metric("⏳ 현재 업무 지속 시간", f"{str(diff).split('.')[0]}")
                 
                 if st.button("🏁 퇴근하기", use_container_width=True):
-                    # 퇴근 업데이트 로직
-                    attendance_df.loc[(attendance_df['date'] == today) & (attendance_df['username'] == user_info['username']), 'clock_out'] = now_time
+                    attendance_df.loc[(attendance_df['date'] == today) & (attendance_df['username'] == user['username']), 'clock_out'] = now_time
                     duration = datetime.now() - c_in_dt
-                    attendance_df.loc[(attendance_df['date'] == today) & (attendance_df['username'] == user_info['username']), 'total_hours'] = f"{duration.total_seconds()/3600:.2f}"
+                    attendance_df.loc[(attendance_df['date'] == today) & (attendance_df['username'] == user['username']), 'total_hours'] = f"{duration.total_seconds()/3600:.2f}"
                     conn.update(spreadsheet=SHEET_URL, worksheet="attendance", data=attendance_df)
                     st.balloons()
                     st.rerun()
@@ -124,7 +124,7 @@ def main():
                 st.info("오늘 업무를 마쳤습니다. 수고하셨습니다!")
                 st.write(f"출근: {my_today_record.iloc[0]['clock_in']} | 퇴근: {my_today_record.iloc[0]['clock_out']}")
 
-        # 2. 업무 보고 작성 기능 (소각 시설 양식 적용)
+        # 2. 소각 시설 업무 보고 작성
         elif main_menu == "📝 업무 보고 작성":
             st.title("📝 시설 업무 보고")
             with st.form("facility_report_form"):
@@ -142,7 +142,7 @@ def main():
                     reports_df = get_data("reports")
                     new_report = pd.DataFrame([{
                         "날짜": str(date_report),
-                        "작성자": user_info['name'],
+                        "작성자": user['name'],
                         "업체명": company,
                         "반입중량": weight,
                         "소각량": incin_amt,
@@ -157,7 +157,8 @@ def main():
         # 3. 기록 조회 기능
         elif main_menu == "📊 기록 조회":
             st.title("📊 업무 기록 열람")
-            tab1, tab2 = st.tabs(["근태 기록", "업무 보고 기록"])
+            tab1, tab2 = st.tabs(["⏰ 근태 기록", "📝 업무 보고 기록"])
             
             with tab1:
-                st.dataframe(get
+                st.subheader("나의 출퇴근 기록")
+                df_att = get
