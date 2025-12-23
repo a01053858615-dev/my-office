@@ -4,7 +4,7 @@ import pandas as pd
 
 # 1. 구글 시트 연결 설정
 # 시트 주소에 아까 복사한 본인의 구글 시트 링크를 넣어주세요
-url = "여기에_복사한_구글시트_링크를_넣으세요"
+url = "https://docs.google.com/spreadsheets/d/1nhrngvyO-L2Cwbvr_2-I-D1qwunYtB1WJuv9QBev8Nw/edit?gid=0#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 st.title("📋 업무 보고 및 저장 시스템")
