@@ -33,8 +33,38 @@ def main():
 
         if choice == "로그인":
             st.subheader("🔐 시스템 로그인")
-            user = st.text_input("아이디")
-            pw = st.text_input("비밀번호", type='password')
+            user_input = st.text_input("아이디")
+            pw_input = st.text_input("비밀번호", type='password')
+            
+            if st.button("접속"):
+                users_df = get_data("users")
+                
+                # --- 디버그용 코드 시작 (문제 해결 후 삭제 가능) ---
+                st.write("### 🔍 로그인 검사기")
+                st.write(f"1. 입력한 아이디: '{user_input}'")
+                
+                # 시트의 데이터를 문자열로 강제 변환하고 공백 제거
+                users_df['username'] = users_df['username'].astype(str).str.strip()
+                users_df['password'] = users_df['password'].astype(str).str.strip()
+                
+                st.write("2. 시트에 저장된 아이디 목록:", users_df['username'].tolist())
+                
+                hashed_pw = make_hashes(pw_input)
+                st.write(f"3. 입력한 비번의 해시값(앞 10자): {hashed_pw[:10]}...")
+                # --- 디버그용 코드 끝 ---
+
+                # 일치하는 계정 확인 (공백 제거 버전)
+                match = users_df[(users_df['username'] == user_input.strip()) & 
+                                 (users_df['password'] == hashed_pw)]
+                
+                if not match.empty:
+                    st.session_state['logged_in'] = True
+                    st.session_state['user_info'] = match.iloc[0].to_dict()
+                    st.success(f"{st.session_state['user_info']['name']}님, 반갑습니다!")
+                    st.rerun()
+                else:
+                    st.error("아이디 또는 비밀번호가 틀렸습니다.")
+                    st.info("💡 팁: 시트의 아이디/비번에 앞뒤 공백이 있는지 확인해 보세요.")
             
             if st.button("접속"):
                 users_df = get_data("users")
