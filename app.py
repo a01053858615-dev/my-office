@@ -4,7 +4,7 @@ import pandas as pd
 import hashlib
 
 # --- [설정] 본인의 구글 시트 주소를 여기에 입력하세요 ---
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1nhrngvyO-L2Cwbvr_2-I-D1qwunYtB1WJuv9QBev8Nw/edit?usp=sharing"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/여기에_본인의_시트_ID_입력/edit?usp=sharing"
 
 # 1. 연결 설정
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -13,9 +13,11 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 def make_hashes(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
-# 3. 데이터 로드 함수 (주소와 탭 이름을 명시하여 오류 방지)
+# 3. 데이터 로드 함수
 def get_data(worksheet_name):
-    return conn.read(spreadsheet=SHEET_URL, worksheet=worksheet_name, ttl=0)
+    # 데이터를 읽어올 때 모든 값을 문자열로 읽고 공백을 제거하여 오류를 방지합니다.
+    df = conn.read(spreadsheet=SHEET_URL, worksheet=worksheet_name, ttl=0)
+    return df.astype(str).apply(lambda x: x.str.strip())
 
 # 4. 세션 상태 초기화
 if 'logged_in' not in st.session_state:
@@ -27,51 +29,27 @@ def main():
     st.sidebar.title("🔥 시설 통합 관리")
 
     if not st.session_state['logged_in']:
-        # 로그인 전 화면
         menu = ["로그인", "회원가입"]
         choice = st.sidebar.selectbox("메뉴", menu)
 
         if choice == "로그인":
             st.subheader("🔐 시스템 로그인")
-            user_input = st.text_input("아이디")
-            pw_input = st.text_input("비밀번호", type='password')
+            user_input = st.text_input("아이디", key="login_user")
+            pw_input = st.text_input("비밀번호", type='password', key="login_pw")
             
-            if st.button("접속"):
+            # 버튼에 key="login_btn"을 추가하여 중복 오류를 방지합니다.
+            if st.button("접속", key="login_btn"):
                 users_df = get_data("users")
-                
-                # --- 디버그용 코드 시작 (문제 해결 후 삭제 가능) ---
-                st.write("### 🔍 로그인 검사기")
-                st.write(f"1. 입력한 아이디: '{user_input}'")
-                
-                # 시트의 데이터를 문자열로 강제 변환하고 공백 제거
-                users_df['username'] = users_df['username'].astype(str).str.strip()
-                users_df['password'] = users_df['password'].astype(str).str.strip()
-                
-                st.write("2. 시트에 저장된 아이디 목록:", users_df['username'].tolist())
-                
                 hashed_pw = make_hashes(pw_input)
-                st.write(f"3. 입력한 비번의 해시값(앞 10자): {hashed_pw[:10]}...")
-                # --- 디버그용 코드 끝 ---
-
-                # 일치하는 계정 확인 (공백 제거 버전)
-                match = users_df[(users_df['username'] == user_input.strip()) & 
-                                 (users_df['password'] == hashed_pw)]
                 
-                if not match.empty:
-                    st.session_state['logged_in'] = True
-                    st.session_state['user_info'] = match.iloc[0].to_dict()
-                    st.success(f"{st.session_state['user_info']['name']}님, 반갑습니다!")
-                    st.rerun()
-                else:
-                    st.error("아이디 또는 비밀번호가 틀렸습니다.")
-                    st.info("💡 팁: 시트의 아이디/비번에 앞뒤 공백이 있는지 확인해 보세요.")
-            
-            if st.button("접속"):
-                users_df = get_data("users")
-                hashed_pw = make_hashes(pw)
+                # [디버그 정보] 로그인이 안 될 때 아래 내용을 확인해 보세요.
+                st.write("--- 🔍 로그인 체크 중 ---")
+                st.write(f"입력 아이디: [{user_input}]")
+                st.write(f"시트 내 아이디 목록: {users_df['username'].tolist()}")
                 
                 # 일치하는 계정 확인
-                match = users_df[(users_df['username'] == user) & (users_df['password'] == hashed_pw)]
+                match = users_df[(users_df['username'] == user_input) & 
+                                 (users_df['password'] == hashed_pw)]
                 
                 if not match.empty:
                     st.session_state['logged_in'] = True
@@ -83,16 +61,21 @@ def main():
 
         elif choice == "회원가입":
             st.subheader("📝 신규 계정 등록")
-            new_user = st.text_input("아이디 설정")
-            new_name = st.text_input("성함")
-            new_pw = st.text_input("비밀번호 설정", type='password')
+            new_user = st.text_input("아이디 설정", key="reg_user")
+            new_name = st.text_input("성함", key="reg_name")
+            new_pw = st.text_input("비밀번호 설정", type='password', key="reg_pw")
             
-            if st.button("등록 신청"):
+            if st.button("등록 신청", key="reg_btn"):
                 users_df = get_data("users")
                 if new_user in users_df['username'].values:
                     st.warning("이미 사용 중인 아이디입니다.")
                 else:
-                    new_entry = pd.DataFrame([{"username": new_user, "password": make_hashes(new_pw), "name": new_name, "role": "user"}])
+                    new_entry = pd.DataFrame([{
+                        "username": new_user, 
+                        "password": make_hashes(new_pw), 
+                        "name": new_name, 
+                        "role": "user"
+                    }])
                     updated_users = pd.concat([users_df, new_entry], ignore_index=True)
                     conn.update(spreadsheet=SHEET_URL, worksheet="users", data=updated_users)
                     st.success("계정이 생성되었습니다! 로그인을 진행해 주세요.")
@@ -102,42 +85,12 @@ def main():
         user_info = st.session_state['user_info']
         st.sidebar.info(f"접속자: {user_info['name']} ({user_info['role']})")
         
-        if st.sidebar.button("로그아웃"):
+        if st.sidebar.button("로그아웃", key="logout_btn"):
             st.session_state['logged_in'] = False
             st.rerun()
 
-        # 사이드바 메뉴 구성
-        main_menu = st.sidebar.radio("업무 선택", ["대시보드", "업무 보고 작성", "기록 조회"])
-
-        if main_menu == "대시보드":
-            st.title("🏠 관리 대시보드")
-            st.write(f"{user_info['name']}님, 오늘 업무를 확인하세요.")
-            # 시설 데이터 요약 등을 여기에 추가할 수 있습니다.
-
-        elif main_menu == "업무 보고 작성":
-            st.title("📝 업무 보고서 작성")
-            with st.form("report_form"):
-                date = st.date_input("날짜")
-                title = st.text_input("보고 제목")
-                content = st.text_area("상세 내용 (소각량, 시설 점검 내용 등)")
-                
-                if st.form_submit_button("보고서 제출"):
-                    reports_df = get_data("reports")
-                    new_report = pd.DataFrame([{
-                        "날짜": str(date),
-                        "작성자": user_info['name'],
-                        "제목": title,
-                        "내용": content,
-                        "결재상태": "대기"
-                    }])
-                    updated_reports = pd.concat([reports_df, new_report], ignore_index=True)
-                    conn.update(spreadsheet=SHEET_URL, worksheet="reports", data=updated_reports)
-                    st.success("보고서가 서버에 영구 저장되었습니다.")
-
-        elif main_menu == "기록 조회":
-            st.title("📊 업무 기록 조회")
-            reports_df = get_data("reports")
-            st.dataframe(reports_df, use_container_width=True)
+        st.title("🏠 관리 대시보드")
+        st.write(f"[{user_info['name']}]님, 환영합니다. 현재 권한은 [{user_info['role']}]입니다.")
 
 if __name__ == '__main__':
     main()
