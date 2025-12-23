@@ -5,7 +5,7 @@ import hashlib
 from datetime import datetime
 
 # --- [설정] 본인의 구글 시트 주소 입력 ---
-SHEET_URL = "https://docs.google.com/spreadsheets/d/여기에_본인의_시트_ID_입력/edit?usp=sharing"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1nhrngvyO-L2Cwbvr_2-I-D1qwunYtB1WJuv9QBev8Nw/edit?usp=sharing"
 
 # 1. 연결 설정
 conn = st.connection("gsheets", type=GSheetsConnection)
