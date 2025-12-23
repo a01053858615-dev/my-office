@@ -14,10 +14,20 @@ def make_hashes(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
 # 3. 데이터 로드 함수
+# 기존 get_data 함수를 이 내용으로 덮어쓰세요
 def get_data(worksheet_name):
-    # 데이터를 읽어올 때 모든 값을 문자열로 읽고 공백을 제거하여 오류를 방지합니다.
+    # 1. 데이터를 먼저 읽어옵니다.
     df = conn.read(spreadsheet=SHEET_URL, worksheet=worksheet_name, ttl=0)
-    return df.astype(str).apply(lambda x: x.str.strip())
+    
+    # 2. 모든 데이터를 문자로 변환합니다.
+    df = df.astype(str)
+    
+    # 3. 데이터 뒤에 붙은 '.0'을 제거하고 앞뒤 공백을 깎아냅니다.
+    # (숫자 아이디가 소수점으로 변하는 현상 방지)
+    for col in df.columns:
+        df[col] = df[col].str.replace(r'\.0$', '', regex=True).str.strip()
+        
+    return df
 
 # 4. 세션 상태 초기화
 if 'logged_in' not in st.session_state:
