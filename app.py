@@ -1,6 +1,6 @@
 # app.py의 로그인 버튼 클릭 부분 (if st.button("접속하기"): 아래에 추가)
             if st.button("접속하기", use_container_width=True):
-                users_df = get_data("users")
+            users_df = get_data("users")
                 
                 # 진단용: 시트에서 읽어온 데이터가 있는지 확인
                 if users_df.empty:
