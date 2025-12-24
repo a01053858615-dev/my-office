@@ -7,7 +7,7 @@ from datetime import datetime
 # --- [설정] 본인의 구글 시트 주소 ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1nhrngvyO-L2Cwbvr_2-I-D1qwunYtB1WJuv9QBev8Nw/edit?usp=sharing".strip()
 
-# 1. 페이지 설정 (가장 첫 줄에 와야 함)
+# 1. 페이지 설정 (반드시 모든 st 명령 중 가장 위에 와야 함)
 st.set_page_config(page_title="시설 통합 관리 시스템", layout="wide")
 
 # 2. 구글 시트 연결
